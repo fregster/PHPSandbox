@@ -3,15 +3,15 @@ require_once 'phpsandbox.php';
 
 $sandbox = new PHPSandbox();
 
+//For example purposes
 session_start();
-
-echo(session_id());
 $_SESSION['TestValue'] = 'Yay :-)';
-var_dump($_SESSION);
 
 ?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.0 Transitional//EN" "http://www.w3.org/TR/REC-html40/loose.dtd">
 <html>
 	<head>
+		<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
 		<title>PHPSandbox Examples</title>
 	</head>
 	<body>
