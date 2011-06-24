@@ -18,9 +18,9 @@ class PHPSandbox {
 								'pass_get' => false, 
 								'pass_session' => true,
 								'auto_prepend_file' => false, 
-								'max_execution_time' => 2, 
+								'max_execution_time' => 1, 
 								'memory_limit' => '2M', 
-								'disable_functions' => 'exec,passthru,shell_exec,system,proc_open,popen,curl_exec,curl_multi_exec,parse_ini_file,show_source,pcntl_fork,pcntl_exec,session_start');
+								'disable_functions' => 'exec,passthru,shell_exec,system,proc_open,popen,curl_exec,curl_multi_exec,parse_ini_file,show_source,pcntl_fork,pcntl_exec,session_start,phpinfo');
 	private $cli_options = '';
 	
 	private $pre_fix_php = 'date_default_timezone_set("UTC");$i = 1;unset($argv[0]);while ($i < 3 && isset($argv[$i])){if(substr($argv[$i], 0, 5) == "_POST"){$_POST = unserialize(substr($argv[$i], 6));unset($argv[$i]);}else if(substr($argv[$i], 0, 4) == "_GET"){$_GET = unserialize(substr($argv[$i], 5));unset($argv[$i]);break;}$i++;}foreach($_ENV as $key => $value){putenv("$key=null");$_ENV[$key]=null;unset($_ENV[$key]);};echo"PREFIXED!";';
@@ -68,7 +68,10 @@ class PHPSandbox {
 		if(file_exists($path)){
 			if(($lintCode && $this->lintFile($path)) || !$lintCode){
 				$chroot = dirname($path);
-				return shell_exec("php $this->cli_options -d auto_prepend_file=".$this->options['auto_prepend_file']." -d chroot=$chroot -f $path ".$this->buildVars($pass_through_vars));	
+				if(isset($this->options['auto_prepend_file']) && file_exists($this->options['auto_prepend_file'])){
+					return shell_exec("php $this->cli_options -d auto_prepend_file=".$this->options['auto_prepend_file']." -d chroot=$chroot -f $path ".$this->buildVars($pass_through_vars));	
+				}
+				return shell_exec("php $this->cli_options -d chroot=$chroot -f $path ".$this->buildVars($pass_through_vars));	
 			}
 		}
 		return false;
