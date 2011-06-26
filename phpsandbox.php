@@ -16,7 +16,8 @@ class PHPSandbox {
 								'display_errors' => 'off',
 								'pass_post' => false, 
 								'pass_get' => false, 
-								'pass_session' => true,
+								'pass_session_data' => false,
+								'pass_session_id' => false,
 								'auto_prepend_file' => false, 
 								'max_execution_time' => 1, 
 								'memory_limit' => '2M', 
@@ -38,23 +39,53 @@ class PHPSandbox {
 		$this->options['auto_prepend_file'] = dirname(__FILE__).DIRECTORY_SEPARATOR.'phpsandbox-prepend.php';
 		$this->options = array_merge($this->options, $options);
 		
+		if(isset($this->options['pass_session_id']) && $this->options['pass_session_id'] && isset($this->options['pass_session_data']) && $this->options['pass_session_data']){
+			$this->enableFunction('session_start', false);
+		}
 		
-		$this->cli_options .= '-d chroot='.$this->options['chroot'].' -d display_errors='.$this->options['display_errors'].' -d disable_functions='.$this->options['disable_functions']. ' -d memory_limit='.$this->options['memory_limit'].' -d max_execution_time='.$this->options['max_execution_time'];
+		$this->buildCLIOptions();
+	}
+	
+	/**
+	 * 
+	 * Build the CLI options string
+	 */
+	private function buildCLIOptions(){
+		$this->cli_options = '-d chroot='.$this->options['chroot'].' -d display_errors='.$this->options['display_errors']. ' -d memory_limit='.$this->options['memory_limit'].' -d max_execution_time='.$this->options['max_execution_time'];
+		if(isset($this->options['disable_functions']) && $this->options['disable_functions'] != ''){
+			$this->cli_options .=' -d disable_functions='.$this->options['disable_functions'];
+		}
 	}
 	
 	/**
 	 * 
 	 * Enable a function from the disallowed function list
 	 * @param string $function
+	 * @param bool $force_rebuild
 	 */
-	public function enableFunction($function){
+	public function enableFunction($function, $force_rebuild = true){
 		$functions = explode(',', $this->options['disable_functions']);
-		array_flip($functions);
+		$functions = array_flip($functions);
 		if(isset($function) && isset($functions[$function])){
 			unset($functions[$function]);
 		}
-		array_flip($functions);
+		$functions = array_flip($functions);
 		$this->options['disable_functions'] = implode(',', $functions);
+		if($force_rebuild){
+			$this->buildCLIOptions();
+		}
+	}
+	
+	/**
+	 * 
+	 * Remove all function and method restrictions
+	 * @param bool $YesIReallyWantTo
+	 */
+	public function enableAllFunction($YesIReallyWantTo = false){
+		if($YesIReallyWantTo){
+			$this->options['disable_functions'] = '';
+			$this->buildCLIOptions();
+		}
 	}
 	
 	/**
@@ -69,6 +100,8 @@ class PHPSandbox {
 			if(($lintCode && $this->lintFile($path)) || !$lintCode){
 				$chroot = dirname($path);
 				if(isset($this->options['auto_prepend_file']) && file_exists($this->options['auto_prepend_file'])){
+					//For debuging
+					//echo("php $this->cli_options -d auto_prepend_file=".$this->options['auto_prepend_file']." -d chroot=$chroot -f $path ".$this->buildVars($pass_through_vars));
 					return shell_exec("php $this->cli_options -d auto_prepend_file=".$this->options['auto_prepend_file']." -d chroot=$chroot -f $path ".$this->buildVars($pass_through_vars));	
 				}
 				return shell_exec("php $this->cli_options -d chroot=$chroot -f $path ".$this->buildVars($pass_through_vars));	
@@ -113,9 +146,19 @@ class PHPSandbox {
 			$string .= ' _GET=\''.serialize($_GET)."'";
 		}
 		
-		if($this->options['pass_session'] && session_id() != ''){
+		if($this->options['pass_session_data'] && session_id() != ''){
+			if(isset($this->options['pass_session_id']) && $this->options['pass_session_id'] ){
+				$string .= ' _PHPSESSID=\''.session_id()."'";
+			}else {
+				$string .= ' _PHPSESSID=\''.sha1(rand(0,getrandmax()).serialize($_SERVER).time())."'";
+			}
+		}
+		
+		if($this->options['pass_session_data'] && session_id() != '' && (!isset($this->options['pass_session_id']) || !$this->options['pass_session_id'] )){
 			$string .= ' _SESSION=\''.serialize($_SESSION)."'";
 		}
+		
+		$string .= ' _END';
 			
 		if(isset($pass_through_vars) and count($pass_through_vars) > 0){
 			foreach ($pass_through_vars as $value){

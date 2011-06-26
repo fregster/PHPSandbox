@@ -23,9 +23,14 @@ while ($i < 3 && isset($argv[$i])){
 	}else if(substr($argv[$i], 0, 4) == '_GET'){
 		$_GET = unserialize(substr($argv[$i], 5));
 		unset($argv[$i]);
+	}else if(substr($argv[$i], 0, 10) == '_PHPSESSID'){
+		$_COOKIE['PHPSESSID'] = substr($argv[$i], 11);
+		session_id(substr($argv[$i], 11));
+		unset($argv[$i]);
 	}else if(substr($argv[$i], 0, 8) == '_SESSION'){
 		$_SESSION = unserialize(substr($argv[$i], 9));
 		unset($argv[$i]);
+	}else if (substr($argv[$i], 0, 4) == '_END'){
 		break;
 	}
 	$i++;
