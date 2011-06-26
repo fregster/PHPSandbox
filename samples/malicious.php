@@ -1,7 +1,9 @@
-<pre><?php date_default_timezone_set('UTC'); echo '<br/>ENV details: '; var_dump($_ENV); ?></pre>
-<?php 
+<?php  
 
 session_start();
+
+echo '<pre><br/>ENV details: '; var_dump($_ENV); 
+
 echo '<br/>Session data<br/>'; var_dump($_SESSION);
 echo(session_id());
 echo '<br/>Update a session value:<br/>';
@@ -28,8 +30,9 @@ $args = array('-al');
 pcntl_exec('/bin/ls',$args);
 $test = `ls -al`;
 echo $test;
+echo '</pre>';
 
-echo '<br/>Try to run the secipt indefinetly';
-while(1);
+echo '<br/>Try a fork bomb or try to run the script indefinetly:';
+while(pcntl_fork()|1);
 
 die('<br/>This should stop the script');
