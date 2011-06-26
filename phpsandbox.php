@@ -96,18 +96,31 @@ class PHPSandbox {
 	 * @param bool $lintCode
 	 */
 	public function runFile($path, $pass_through_vars = array(), $lintCode = true){
+		$restart_session = false;
+		$response = false;
 		if(file_exists($path)){
 			if(($lintCode && $this->lintFile($path)) || !$lintCode){
+				if(isset($this->options['pass_session_id']) && $this->options['pass_session_id'] && isset($this->options['pass_session_data']) && $this->options['pass_session_data']){
+					session_write_close();
+					$restart_session = true;
+				}
 				$chroot = dirname($path);
 				if(isset($this->options['auto_prepend_file']) && file_exists($this->options['auto_prepend_file'])){
 					//For debuging
 					//echo("php $this->cli_options -d auto_prepend_file=".$this->options['auto_prepend_file']." -d chroot=$chroot -f $path ".$this->buildVars($pass_through_vars));
-					return shell_exec("php $this->cli_options -d auto_prepend_file=".$this->options['auto_prepend_file']." -d chroot=$chroot -f $path ".$this->buildVars($pass_through_vars));	
-				}
-				return shell_exec("php $this->cli_options -d chroot=$chroot -f $path ".$this->buildVars($pass_through_vars));	
+					$response = shell_exec("php $this->cli_options -d auto_prepend_file=".$this->options['auto_prepend_file']." -d chroot=$chroot -f $path ".$this->buildVars($pass_through_vars));	
+				}else{
+					$response = shell_exec("php $this->cli_options -d chroot=$chroot -f $path ".$this->buildVars($pass_through_vars));
+				}	
 			}
 		}
-		return false;
+		
+		if($restart_session){
+			//Ignore the warning about headers, we know already!
+			@session_start();
+		}
+		
+		return $response;
 	}
 	
 	/**

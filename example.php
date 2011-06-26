@@ -1,6 +1,8 @@
 <?php
 require_once 'phpsandbox.php';
 
+ini_set('display_warnings', 'on');
+
 //Default sandbox
 $sandbox = new PHPSandbox();
 
@@ -8,17 +10,19 @@ $sandbox = new PHPSandbox();
 $sandbox2 = new PHPSandbox(array('pass_session_data' => true));
 
 //Modified sandbox to allow full access of session data
-//FIXME: For some reason if the true session support is passed through to the cli the outer sctipt dies :-S
 $sandbox3 = new PHPSandbox(array('pass_session_data' => true,
-								//'pass_session_id' => true,
+								'pass_session_id' => true,
 								'display_errors' => 'on',
 ));
 
+//We really do trust this script
 $sandbox3->enableAllFunction(true);
 
 //For example purposes
 session_start();
-$_SESSION['TestValue'] = 'Yay :-)';
+if(!isset($_SESSION['TestValue'])){
+	$_SESSION['TestValue'] = 'Yay :-) '.time();
+}
 
 ?>
 <!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.0 Transitional//EN" "http://www.w3.org/TR/REC-html40/loose.dtd">
@@ -32,7 +36,7 @@ $_SESSION['TestValue'] = 'Yay :-)';
 		
 		<div>
 			<div><h3>Output Session Data</h3><p>Show the start Session data</p></div>
-			<div style="border:1px; padding:5px;"><?php echo 'Genuine Session ID: '.session_id().'<br/>'; var_dump($_SESSION); ?></div>
+			<div style="border:1px; padding:5px;"><?php echo 'Genuine Session ID: '.session_id().'<br/>'; foreach ($_SESSION as $key => $value){ echo '<p>'.$key.' = '.$value.'</p>'; }; ?></div>
 		</div>
 		
 		<div>
@@ -67,7 +71,7 @@ $_SESSION['TestValue'] = 'Yay :-)';
 		
 		<div>
 			<div><h3>Output Session Data</h3><p>Show the now Session data</p></div>
-			<div style="border:1px; padding:5px;"><?php var_dump($_SESSION); ?></div>
+			<div style="border:1px; padding:5px;"><?php foreach ($_SESSION as $key => $value){ echo '<p>'.$key.' = '.$value.'</p>'; }; ?></div>
 		</div>
 		
 	</body>

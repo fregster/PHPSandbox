@@ -31,6 +31,7 @@ while ($i < 3 && isset($argv[$i])){
 		$_SESSION = unserialize(substr($argv[$i], 9));
 		unset($argv[$i]);
 	}else if (substr($argv[$i], 0, 4) == '_END'){
+		unset($argv[$i]);
 		break;
 	}
 	$i++;
@@ -48,4 +49,3 @@ foreach($_SERVER as $key => $value){
 	$_SERVER[$key]=null;
 	unset($_SERVER[$key]);
 }
-
