@@ -1,0 +1,21 @@
+PHPSandbox
+
+A way to run external scripts from your core PHP files.
+Allows for running non-trusted PHP from with in your main PHP application.
+Allows the main script to continue should a fatal error occour in your incuded code.
+Supports:
+	Function restrictions
+	Enviroment obscurification
+	Sessions
+	Passing GET and POST param's
+	INI settings protection
+	Run's as a seperate process to protect the parent PHP script from crashs
+	Prevent's interaction with the parent PHP
+	
+	
+Requirements:
+PHP 5.2+ (Only tested in PHP 5.3 currently)
+PHP CLI
+
+Notes:
+Only currently tested under Linux and OSX
