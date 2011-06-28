@@ -11,3 +11,11 @@ $_SESSION['TRUSTED_TIME'] = time();
 echo '<p>Updated Session Data: ';
 
 var_dump($_SESSION);
+
+echo '<p>GET Data: ';
+
+var_dump($_GET);
+
+echo '<p>POST Data: ';
+
+var_dump($_POST);

@@ -17,8 +17,10 @@ echo('<br/>Get: '.$_COOKIE['PHPSESSID']);
 echo '$argv details: ';
 var_dump($argv);
 
+echo '<br/>Try to set the memory limit to 2G: ';
+ini_set('memory_limit', '2G');
 echo '<br/>Get the memory limit details: ';
-ini_get('memory_limit');
+echo(ini_get('memory_limit'));
 
 echo '<br/>Run a system command "ls /"';
 echo system('ls /');

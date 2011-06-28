@@ -12,6 +12,8 @@
 class PHPSandbox {
 	
 	private $lint_code = true;
+	private $session_workaround = false;
+	
 	private $options = 	array(	'chroot' => '/', 
 								'display_errors' => 'off',
 								'pass_post' => false, 
@@ -19,10 +21,13 @@ class PHPSandbox {
 								'pass_session_data' => false,
 								'pass_session_id' => false,
 								'auto_prepend_file' => false, 
+								'force_session_workaround' => true,
 								'max_execution_time' => 1, 
 								'memory_limit' => '2M', 
-								'disable_functions' => 'exec,passthru,shell_exec,system,proc_open,popen,curl_exec,curl_multi_exec,parse_ini_file,show_source,pcntl_fork,pcntl_exec,session_start,phpinfo');
+								'disable_functions' => 'exec,passthru,shell_exec,system,proc_open,popen,curl_exec,curl_multi_exec,parse_ini_file,show_source,pcntl_fork,pcntl_exec,session_start,phpinfo,ini_set');
 	private $cli_options = '';
+	
+	private $session_id = false;
 	
 	private $pre_fix_php = 'date_default_timezone_set("UTC");$i = 1;unset($argv[0]);while ($i < 3 && isset($argv[$i])){if(substr($argv[$i], 0, 5) == "_POST"){$_POST = unserialize(substr($argv[$i], 6));unset($argv[$i]);}else if(substr($argv[$i], 0, 4) == "_GET"){$_GET = unserialize(substr($argv[$i], 5));unset($argv[$i]);break;}$i++;}foreach($_ENV as $key => $value){putenv("$key=null");$_ENV[$key]=null;unset($_ENV[$key]);};echo"PREFIXED!";';
 	
@@ -43,7 +48,18 @@ class PHPSandbox {
 			$this->enableFunction('session_start', false);
 		}
 		
+		$this->tempPath = sys_get_temp_dir();
+		
+		$this->sessionWorkaround();
+		
 		$this->buildCLIOptions();
+	}
+	
+	private function sessionWorkaround(){
+		$session_workaround = array('Darwin' => true);
+		if(isset($session_workaround[PHP_OS]) && $session_workaround[PHP_OS] || $this->options['force_session_workaround']){
+			$this->session_workaround = true;
+		}
 	}
 	
 	/**
@@ -51,10 +67,17 @@ class PHPSandbox {
 	 * Build the CLI options string
 	 */
 	private function buildCLIOptions(){
-		$this->cli_options = '-d chroot='.$this->options['chroot'].' -d display_errors='.$this->options['display_errors']. ' -d memory_limit='.$this->options['memory_limit'].' -d max_execution_time='.$this->options['max_execution_time'];
+		$this->cli_options = '-d session.name=PHPSESSID -d chroot='.$this->options['chroot'].' -d display_errors='.$this->options['display_errors']. ' -d memory_limit='.$this->options['memory_limit'].' -d max_execution_time='.$this->options['max_execution_time'];
 		if(isset($this->options['disable_functions']) && $this->options['disable_functions'] != ''){
 			$this->cli_options .=' -d disable_functions='.$this->options['disable_functions'];
 		}
+		
+		if(ini_get('session.save_path') && ini_get('session.save_path') != ''){
+			$this->cli_options .= ' -d session.save_path='.ini_get('session.save_path');
+		}else{
+			$this->cli_options .= ' -d session.save_path='.$this->tempPath;
+		}
+		
 	}
 	
 	/**
@@ -97,10 +120,12 @@ class PHPSandbox {
 	 */
 	public function runFile($path, $pass_through_vars = array(), $lintCode = true){
 		$restart_session = false;
+		$session_id = null;
 		$response = false;
 		if(file_exists($path)){
 			if(($lintCode && $this->lintFile($path)) || !$lintCode){
-				if(isset($this->options['pass_session_id']) && $this->options['pass_session_id'] && isset($this->options['pass_session_data']) && $this->options['pass_session_data']){
+				if(isset($this->options['pass_session_id']) && $this->options['pass_session_id']){
+					$this->session_id = session_id();
 					session_write_close();
 					$restart_session = true;
 				}
@@ -117,7 +142,16 @@ class PHPSandbox {
 		
 		if($restart_session){
 			//Ignore the warning about headers, we know already!
+			session_id($this->session_id);
 			@session_start();
+			if($this->session_workaround){
+				session_decode(file_get_contents($this->tempPath.'sess_'.$this->session_id));
+				/*
+				if($this->tempPath.'sess_'.$this->session_id != ini_get('session.save_path')){
+					unlink($this->tempPath.'sess_'.$this->session_id);
+				}
+				*/
+			}
 		}
 		
 		return $response;
@@ -131,15 +165,12 @@ class PHPSandbox {
 	 * @param bool $lintCode
 	 */
 	public function runCode($code, $pass_through_vars = array(), $lintCode = false){
-		if(($lintCode && $this->lintCode($code)) || !$lintCode || true){
-			$chroot = $this->createTempCHRoot();
-			
-			
-			$command = 'php -r "eval(\'?>hello<?php ;\');";';
-			
-			return shell_exec($command);
-		}
-		return false;
+		$path = tempnam($this->tempPath, 'tmp');
+		file_put_contents($path, $code);
+		
+		$response = $this->runFile($path, $pass_through_vars, $lintCode);
+		unlink($path);
+		return $response;
 	}
 	
 	/**
@@ -159,15 +190,19 @@ class PHPSandbox {
 			$string .= ' _GET=\''.serialize($_GET)."'";
 		}
 		
-		if($this->options['pass_session_data'] && session_id() != ''){
+		if($this->session_workaround){
+			$string .= ' _SESSWORKAROUND=\'true\'';
+		}
+		
+		if($this->options['pass_session_data'] && $this->session_id && $this->session_id != ''){
 			if(isset($this->options['pass_session_id']) && $this->options['pass_session_id'] ){
-				$string .= ' _PHPSESSID=\''.session_id()."'";
+				$string .= ' _PHPSESSID=\''.$this->session_id."'";
 			}else {
 				$string .= ' _PHPSESSID=\''.sha1(rand(0,getrandmax()).serialize($_SERVER).time())."'";
 			}
 		}
 		
-		if($this->options['pass_session_data'] && session_id() != '' && (!isset($this->options['pass_session_id']) || !$this->options['pass_session_id'] )){
+		if($this->options['pass_session_data']){
 			$string .= ' _SESSION=\''.serialize($_SESSION)."'";
 		}
 		
