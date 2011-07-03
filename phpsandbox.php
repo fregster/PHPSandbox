@@ -5,7 +5,21 @@
  * A PHP sandboxing class to help increase security of unknown scripts
  * This is not the be all and end all of security!
  * 
- * @author Paul Fryer
+ * Requirements: PHP5
+ * Copyright (c) 2011 Paul Fryer (www.fryer.org.uk)
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the The GNU Lesser General Public License as published by
+ * the Free Software Foundation; version 3 or any latter version of the license.
+ * 
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * The GNU Lesser General Public License (LGPLv3) for more details.
+ * 
+ * 
+ * @package PHPSandbox
+ * @author Paul Fryer <paul@fryer.org.uk>
+ * @license http://www.opensource.org/licenses/lgpl-3.0.html LGPL
  *
  */
 
