@@ -40,6 +40,7 @@ $sandbox3 = new PHPSandbox(array('pass_session_data' => true,
 								'display_errors' => 'on',
 								'pass_post' => true,
 								'pass_get' => true,
+								'safe_mode' => false,
 ));
 
 //We really do trust this script

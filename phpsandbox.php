@@ -270,14 +270,14 @@ class PHPSandbox {
 	 * @param string the directory of the sctips
 	 */
 	private function enhancedProtection($scriptDir){
-		$dir_seperator = ';';
+		$dir_seperator = ':';
 		if(PHP_OS == 'win'){
-			$dir_seperator = ':';
+			$dir_seperator = ';';
 		}
 		
 		$str = '';
-		if(substr($scriptDir, -1) != DIRECTORY_SEPERATOR){
-			$scriptDir .= DIRECTORY_SEPERATOR;
+		if(substr($scriptDir, -1) != DIRECTORY_SEPARATOR){
+			$scriptDir .= DIRECTORY_SEPARATOR;
 		}
 		
 		if($this->options['safe_mode']){
@@ -285,7 +285,7 @@ class PHPSandbox {
 		}
 		
 		if($this->options['directory_protection']){
-			$str .= ' -d open_basedir="'.$scriptDir;
+			$str .= ' -d open_basedir="'.$scriptDir.$dir_seperator.dirname($this->options['auto_prepend_file']).DIRECTORY_SEPARATOR;
 			
 			if($this->options['directory_protection_allow_tmp']){
 				$str .= $dir_seperator . $this->tempPath;
