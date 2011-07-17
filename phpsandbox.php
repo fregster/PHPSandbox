@@ -38,7 +38,12 @@ class PHPSandbox {
 								'force_session_workaround' => true,
 								'max_execution_time' => 1, 
 								'memory_limit' => '2M', 
-								'disable_functions' => 'exec,passthru,shell_exec,system,proc_open,popen,curl_exec,curl_multi_exec,parse_ini_file,show_source,pcntl_fork,pcntl_exec,session_start,phpinfo,ini_set');
+								'disable_functions' => 'exec,passthru,shell_exec,system,proc_open,popen,curl_exec,curl_multi_exec,parse_ini_file,show_source,pcntl_fork,pcntl_exec,session_start,phpinfo,ini_set',
+								'safe_mode' => true,
+								'directory_protection' => true,
+								'directory_protection_allow_tmp' => true
+								);
+	
 	private $cli_options = '';
 	
 	private $session_id = false;
@@ -91,7 +96,6 @@ class PHPSandbox {
 		}else{
 			$this->cli_options .= ' -d session.save_path='.$this->tempPath;
 		}
-		
 	}
 	
 	/**
@@ -147,9 +151,9 @@ class PHPSandbox {
 				if(isset($this->options['auto_prepend_file']) && file_exists($this->options['auto_prepend_file'])){
 					//For debuging
 					//echo("php $this->cli_options -d auto_prepend_file=".$this->options['auto_prepend_file']." -d chroot=$chroot -f $path ".$this->buildVars($pass_through_vars));
-					$response = shell_exec("php $this->cli_options -d auto_prepend_file=".$this->options['auto_prepend_file']." -d chroot=$chroot -f $path ".$this->buildVars($pass_through_vars));	
+					$response = shell_exec("php $this->cli_options -d auto_prepend_file=".$this->options['auto_prepend_file'].$this->enhancedProtection($chroot)." -d chroot=$chroot -f $path ".$this->buildVars($pass_through_vars));	
 				}else{
-					$response = shell_exec("php $this->cli_options -d chroot=$chroot -f $path ".$this->buildVars($pass_through_vars));
+					$response = shell_exec("php $this->cli_options -d chroot=$chroot ".$this->enhancedProtection($chroot). " -f $path ".$this->buildVars($pass_through_vars));
 				}	
 			}
 		}
@@ -260,4 +264,35 @@ class PHPSandbox {
 		return sys_get_temp_dir();
 	}
 	
+	/**
+	 * enhancedProtection
+	 * Sets the additional options to help prevent directory traversal and PHP safe mode
+	 * @param string the directory of the sctips
+	 */
+	private function enhancedProtection($scriptDir){
+		$dir_seperator = ';';
+		if(PHP_OS == 'win'){
+			$dir_seperator = ':';
+		}
+		
+		$str = '';
+		if(substr($scriptDir, -1) != DIRECTORY_SEPERATOR){
+			$scriptDir .= DIRECTORY_SEPERATOR;
+		}
+		
+		if($this->options['safe_mode']){
+			$str .= ' -d safe_mode=1 -d safe_mode_exec_dir="'.$scriptDir.'" ';
+		}
+		
+		if($this->options['directory_protection']){
+			$str .= ' -d open_basedir="'.$scriptDir;
+			
+			if($this->options['directory_protection_allow_tmp']){
+				$str .= $dir_seperator . $this->tempPath;
+			}
+			$str .= '" ';
+		}
+		
+		return $str;
+	}
 }

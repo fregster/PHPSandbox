@@ -25,6 +25,9 @@ echo(ini_get('memory_limit'));
 echo '<br/>Run a system command "ls /"';
 echo system('ls /');
 
+echo '<br/>Try to get /etc/passwd: ';
+echo '<p>'.file_get_contents('/etc/passwd').'</p>';
+
 echo '<br/>Try a series of system commands to get the working directory';
 system('pwd');
 shell_exec('pwd');

@@ -23,4 +23,11 @@ var_dump($_SERVER);
 
 echo 'PHPInfo() details: ';
 phpinfo();
+
+echo '<br/>Try to get /etc/passwd: ';
+echo '<p>'.file_get_contents('/etc/passwd').'</p>';
+
+echo 'Windows Dir: ';
+
+
 ?></pre>
