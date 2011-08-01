@@ -125,6 +125,7 @@ class PHPSandbox {
 	public function enableAllFunction($YesIReallyWantTo = false){
 		if($YesIReallyWantTo){
 			$this->options['disable_functions'] = '';
+			$this->options['safe_mode'] = false;
 			$this->buildCLIOptions();
 		}
 	}
@@ -140,6 +141,7 @@ class PHPSandbox {
 		$restart_session = false;
 		$session_id = null;
 		$response = false;
+
 		if(file_exists($path)){
 			if(($lintCode && $this->lintFile($path)) || !$lintCode){
 				if(isset($this->options['pass_session_id']) && $this->options['pass_session_id']){
@@ -147,13 +149,15 @@ class PHPSandbox {
 					session_write_close();
 					$restart_session = true;
 				}
+
 				$chroot = dirname($path);
 				if(isset($this->options['auto_prepend_file']) && file_exists($this->options['auto_prepend_file'])){
 					//For debuging
-					//echo("php $this->cli_options -d auto_prepend_file=".$this->options['auto_prepend_file']." -d chroot=$chroot -f $path ".$this->buildVars($pass_through_vars));
-					$response = shell_exec("php $this->cli_options -d auto_prepend_file=".$this->options['auto_prepend_file'].$this->enhancedProtection($chroot)." -d chroot=$chroot -f $path ".$this->buildVars($pass_through_vars));	
+					//echo("php $this->cli_options -d auto_prepend_file=\"".addslashes($this->options['auto_prepend_file']).'"'.$this->enhancedProtection($chroot)." -d chroot=$chroot -f $path ".$this->buildVars($pass_through_vars));
+					$response = shell_exec("php $this->cli_options -d auto_prepend_file=\"".addslashes($this->options['auto_prepend_file']).'"'.$this->enhancedProtection($chroot)." -d chroot=\"$chroot\" -f $path ".$this->buildVars($pass_through_vars));	
 				}else{
-					$response = shell_exec("php $this->cli_options -d chroot=$chroot ".$this->enhancedProtection($chroot). " -f $path ".$this->buildVars($pass_through_vars));
+					//echo("php $this->cli_options -d chroot=$chroot ".$this->enhancedProtection($chroot). " -f $path ".$this->buildVars($pass_through_vars));
+					$response = shell_exec("php $this->cli_options -d chroot=\"$chroot\" ".$this->enhancedProtection($chroot). " -f $path ".$this->buildVars($pass_through_vars));
 				}	
 			}
 		}
@@ -249,7 +253,6 @@ class PHPSandbox {
 		$output;
 		$return_var;
 		exec("php -l -f $path", $output, $return_var);
-		
 		if($return_var == 0){
 			return true;
 		}
@@ -271,7 +274,7 @@ class PHPSandbox {
 	 */
 	private function enhancedProtection($scriptDir){
 		$dir_seperator = ':';
-		if(PHP_OS == 'win'){
+		if(PHP_OS == 'WINNT'){
 			$dir_seperator = ';';
 		}
 		
@@ -281,16 +284,16 @@ class PHPSandbox {
 		}
 		
 		if($this->options['safe_mode']){
-			$str .= ' -d safe_mode=1 -d safe_mode_exec_dir="'.$scriptDir.'" ';
+			$str .= ' -d safe_mode=1  -d safe_mode_exec_dir="'.addslashes($scriptDir).'"';
 		}
 		
 		if($this->options['directory_protection']){
-			$str .= ' -d open_basedir="'.$scriptDir.$dir_seperator.dirname($this->options['auto_prepend_file']).DIRECTORY_SEPARATOR;
+			$str .= ' -d open_basedir="'.addslashes($scriptDir).$dir_seperator.addslashes(dirname($this->options['auto_prepend_file'])).DIRECTORY_SEPARATOR;
 			
 			if($this->options['directory_protection_allow_tmp']){
 				$str .= $dir_seperator . $this->tempPath;
 			}
-			$str .= '" ';
+			$str .=  $dir_seperator.'" ';
 		}
 		
 		return $str;

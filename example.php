@@ -40,11 +40,12 @@ $sandbox3 = new PHPSandbox(array('pass_session_data' => true,
 								'display_errors' => 'on',
 								'pass_post' => true,
 								'pass_get' => true,
-								'safe_mode' => false,
 ));
 
 //We really do trust this script
 $sandbox3->enableAllFunction(true);
+
+$dir = dirname(__FILE__).DIRECTORY_SEPARATOR;
 
 //For example purposes
 session_start();
@@ -69,43 +70,43 @@ if(!isset($_SESSION['TestValue'])){
 		
 		<div>
 			<div><h3>Example 1 - Valid Code</h3><p>Just run some considered safe code</p></div>
-			<div style="border:1px; padding:15px; margin:15px; background:cornsilk;"><?php echo($sandbox->runFile('./samples/valid.php')); ?></div>
+			<div style="border:1px; padding:15px; margin:15px; background:cornsilk;"><?php echo($sandbox->runFile($dir.'samples/valid.php')); ?></div>
 		</div>
 
 		<div>
 			<div><h3>Example 2 - Invalid PHP</h3><p>Try to include a file that is badly formated</p></div>
-			<div style="border:1px; padding:15px; margin:15px; background:cornsilk;"><?php echo($sandbox->runFile('./samples/invalid.php')); ?></div>
+			<div style="border:1px; padding:15px; margin:15px; background:cornsilk;"><?php echo($sandbox->runFile($dir.'samples/invalid.php')); ?></div>
 		</div>
 		
 		<div>
 			<div><h3>Example 3 - Malicious PHP</h3><p>Try to run some code that would do something considered dodgy</p></div>
-			<div style="border:1px; padding:15px; margin:15px; background:cornsilk;"><?php echo($sandbox->runFile('./samples/malicious.php')); ?></div>
+			<div style="border:1px; padding:15px; margin:15px; background:cornsilk;"><?php echo($sandbox->runFile($dir.'samples/malicious.php')); ?></div>
 		</div>
 
 		<div>
 			<div><h3>Example 4 - Recon PHP</h3><p>Run some PHP specifically for gathering information about the system (With a copy of the session information and a faked ID)</p></div>
-			<div style="border:1px; padding:15px; margin:15px; background:cornsilk;"><?php echo($sandbox2->runFile('./samples/recon.php')); ?></div>
+			<div style="border:1px; padding:15px; margin:15px; background:cornsilk;"><?php echo($sandbox2->runFile($dir.'samples/recon.php')); ?></div>
 		</div>
 
 		<div>
 			<div><h3>Example 5 - Trusted PHP</h3><p>Run some trusted PHP with Session Access and Update rights (Direct Session access)</p></div>
-			<div style="border:1px; padding:15px; margin:15px; background:cornsilk;"><?php echo($sandbox3->runFile('./samples/trusted.php')); ?></div>
+			<div style="border:1px; padding:15px; margin:15px; background:cornsilk;"><?php echo($sandbox3->runFile($dir.'samples/trusted.php')); ?></div>
 		</div>
 
 		<div>
 			<div><h3>Example 6 - Slow PHP</h3><p>Include a PHP file that would run for longer than the allowed limit</p></div>
-			<div style="border:1px; padding:5px; background:cornsilk;"><?php echo($sandbox->runFile('./samples/slow.php')); ?></div>
+			<div style="border:1px; padding:5px; background:cornsilk;"><?php echo($sandbox3->runFile($dir.'samples/slow.php')); ?></div>
 		</div>
 		
 		<div>
 			<div><h3>Example 7 - Running PHP from a string input</h3><p>Run the trusted PHP code but with protection and as if it's been streamed in to the command</p></div>
-			<div style="border:1px; padding:5px; background:cornsilk;"><?php echo($sandbox->runCode(file_get_contents('./samples/trusted.php'))); ?></div>
+			<div style="border:1px; padding:5px; background:cornsilk;"><?php echo($sandbox3->runCode(file_get_contents($dir.'samples/trusted.php'))); ?></div>
 		</div>
 
 		<div>
 			<div><h3>Output Session Data</h3><p>Show the now Session data</p></div>
 			<div style="border:1px; padding:5px;"><?php foreach ($_SESSION as $key => $value){ echo '<p>'.$key.' = '.$value.'</p>'; }; ?></div>
 		</div>
-		
+
 	</body>
 </html>
