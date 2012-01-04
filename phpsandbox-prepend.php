@@ -29,6 +29,10 @@
 //Common problem so just setting it to something is better than nothing
 date_default_timezone_set('UTC');
 
+//PHP CLI Performance can not take advantage of OpCachers, however APC supports dumping and loading of the cache files
+//Requires apc.enable_cli = 1 in the configuration
+if ( !defined('__DIR__') ) define('__DIR__', dirname(__FILE__));
+
 //If this is setup as root not really useful here and if your running as root your probably up ** creak anyway
 //@chroot(dirname(__FILE__));
 
@@ -53,8 +57,11 @@ while ($i < 100 && isset($argv[$i])){
 	}else if(substr($argv[$i], 0, 8) == '_SESSION'){
 		$_SESSION = unserialize(substr($argv[$i], 9));
 		if($session_workaround){
-			file_put_contents(ini_get('session.save_path').DIRECTORY_SEPARATOR.'sess_'.session_id(), sessionRawEncode($_SESSION));
+			@file_put_contents(ini_get('session.save_path').DIRECTORY_SEPARATOR.'sess_'.session_id(), sessionRawEncode($_SESSION));
 		}
+		unset($argv[$i]);
+	}else if(substr($argv[$i], 0, 4) == '_APC'){
+		define('USE_APC', true);
 		unset($argv[$i]);
 	}else if (substr($argv[$i], 0, 4) == '_END'){
 		unset($argv[$i]);
@@ -63,6 +70,17 @@ while ($i < 100 && isset($argv[$i])){
 	$i++;
 }
 unset($session_workaround);
+
+define('APC_CACHE_FILENAME', md5(__DIR__.DIRECTORY_SEPARATOR.__FILE__).'.apc');
+if(PHP_OS == 'WINNT'){
+	define('APC_CACHE', sys_get_temp_dir().APC_CACHE_FILENAME);
+} else {
+	define('APC_CACHE', '/dev/shm/'.APC_CACHE_FILENAME);
+}
+
+if (defined('USE_APC') && function_exists('apc_bin_loadfile') && is_readable(APC_CACHE)) {
+	apc_bin_loadfile(APC_CACHE, NULL, APC_BIN_VERIFY_CRC32 | APC_BIN_VERIFY_MD5);
+}
 
 //Hide the enviroment veriables to help provide obscurification
 foreach($_ENV as $key => $value){

@@ -34,14 +34,16 @@ class PHPSandbox {
 								'pass_get' => false, 
 								'pass_session_data' => false,
 								'pass_session_id' => false,
-								'auto_prepend_file' => false, 
+								'auto_prepend_file' => false,
+								'auto_append_file' => false, 
 								'force_session_workaround' => true,
 								'max_execution_time' => 1, 
 								'memory_limit' => '2M', 
 								'disable_functions' => 'exec,passthru,shell_exec,system,proc_open,popen,curl_exec,curl_multi_exec,parse_ini_file,show_source,pcntl_fork,pcntl_exec,session_start,phpinfo,ini_set',
 								'safe_mode' => true,
 								'directory_protection' => true,
-								'directory_protection_allow_tmp' => true
+								'directory_protection_allow_tmp' => true,
+								'use_apc' => true,
 								);
 	
 	private $cli_options = '';
@@ -61,6 +63,7 @@ class PHPSandbox {
 	public function __construct($options = array()){
 		$this->options['chroot'] = sys_get_temp_dir();
 		$this->options['auto_prepend_file'] = dirname(__FILE__).DIRECTORY_SEPARATOR.'phpsandbox-prepend.php';
+		$this->options['auto_append_file'] = dirname(__FILE__).DIRECTORY_SEPARATOR.'phpsandbox-append.php';
 		$this->options = array_merge($this->options, $options);
 		
 		if(isset($this->options['pass_session_id']) && $this->options['pass_session_id'] && isset($this->options['pass_session_data']) && $this->options['pass_session_data']){
@@ -95,6 +98,14 @@ class PHPSandbox {
 			$this->cli_options .= ' -d session.save_path='.ini_get('session.save_path');
 		}else{
 			$this->cli_options .= ' -d session.save_path='.$this->tempPath;
+		}
+		
+		if(isset($this->options['auto_prepend_file']) && file_exists($this->options['auto_prepend_file'])){
+			$this->cli_options .= ' -d auto_prepend_file="'.addslashes($this->options['auto_prepend_file']).'"';
+		}
+		
+		if(isset($this->options['auto_append_file']) && file_exists($this->options['auto_append_file'])){
+			$this->cli_options .= ' -d auto_append_file="'.addslashes($this->options['auto_append_file']).'"';
 		}
 	}
 	
@@ -151,14 +162,10 @@ class PHPSandbox {
 				}
 
 				$chroot = dirname($path);
-				if(isset($this->options['auto_prepend_file']) && file_exists($this->options['auto_prepend_file'])){
-					//For debuging
-					//echo("php $this->cli_options -d auto_prepend_file=\"".addslashes($this->options['auto_prepend_file']).'"'.$this->enhancedProtection($chroot)." -d chroot=$chroot -f $path ".$this->buildVars($pass_through_vars));
-					$response = shell_exec("php $this->cli_options -d auto_prepend_file=\"".addslashes($this->options['auto_prepend_file']).'"'.$this->enhancedProtection($chroot)." -d chroot=\"$chroot\" -f $path ".$this->buildVars($pass_through_vars));	
-				}else{
-					//echo("php $this->cli_options -d chroot=$chroot ".$this->enhancedProtection($chroot). " -f $path ".$this->buildVars($pass_through_vars));
-					$response = shell_exec("php $this->cli_options -d chroot=\"$chroot\" ".$this->enhancedProtection($chroot). " -f $path ".$this->buildVars($pass_through_vars));
-				}	
+
+				//For debuging
+				//echo("php $this->cli_options -d auto_prepend_file=\"".addslashes($this->options['auto_prepend_file']).'"'.$this->enhancedProtection($chroot)." -d chroot=$chroot -f $path ".$this->buildVars($pass_through_vars));
+				$response = shell_exec("php $this->cli_options ".$this->enhancedProtection($chroot)." -d chroot=\"$chroot\" -f $path ".$this->buildVars($pass_through_vars));		
 			}
 		}
 		
@@ -228,6 +235,10 @@ class PHPSandbox {
 			$string .= ' _SESSION=\''.serialize($_SESSION)."'";
 		}
 		
+		if($this->options['use_apc']){
+			$string .= ' _APC=\'true\'';
+		}
+		
 		$string .= ' _END';
 			
 		if(isset($pass_through_vars) and count($pass_through_vars) > 0){
@@ -288,11 +299,16 @@ class PHPSandbox {
 		}
 		
 		if($this->options['directory_protection']){
-			$str .= ' -d open_basedir="'.addslashes($scriptDir).$dir_seperator.addslashes(dirname($this->options['auto_prepend_file'])).DIRECTORY_SEPARATOR;
+			$str .= ' -d open_basedir="'.addslashes($scriptDir).$dir_seperator.addslashes(dirname($this->options['auto_prepend_file'])).$dir_seperator.addslashes(dirname($this->options['auto_append_file'])).$dir_seperator.addslashes('/dev/shm/').DIRECTORY_SEPARATOR;
 			
 			if($this->options['directory_protection_allow_tmp']){
 				$str .= $dir_seperator . $this->tempPath;
 			}
+			
+			if($this->options['pass_session_id']){
+				$str .= $dir_seperator . session_save_path();
+			}
+			
 			$str .=  $dir_seperator.'" ';
 		}
 		
