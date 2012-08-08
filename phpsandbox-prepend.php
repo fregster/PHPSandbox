@@ -26,6 +26,8 @@
  *
  */
 
+ //This script is currently quite procedual in style for several reasons. Once completly functionally complete we will seperate in to classes and objects where possible
+ 
 //Common problem so just setting it to something is better than nothing
 date_default_timezone_set('UTC');
 
@@ -33,13 +35,15 @@ date_default_timezone_set('UTC');
 //Requires apc.enable_cli = 1 in the configuration
 if ( !defined('__DIR__') ) define('__DIR__', dirname(__FILE__));
 
-//If this is setup as root not really useful here and if your running as root your probably up ** creak anyway
+//If this is setup as root not really useful here and if your running as root your probably up **** creak anyway
 //@chroot(dirname(__FILE__));
 
 //Fake standard web server var's if passed in
 $session_workaround = false;
 $i = 1;
 unset($argv[0]);
+
+//FIXME: This is very dirty needs re-writing
 while ($i < 100 && isset($argv[$i])){
 	if(substr($argv[$i], 0, 5) == '_POST'){
 		$_POST = unserialize(substr($argv[$i], 6));
@@ -56,6 +60,7 @@ while ($i < 100 && isset($argv[$i])){
 		unset($argv[$i]);
 	}else if(substr($argv[$i], 0, 8) == '_SESSION'){
 		$_SESSION = unserialize(substr($argv[$i], 9));
+		//Currently only works for file sessions
 		if($session_workaround){
 			@file_put_contents(ini_get('session.save_path').DIRECTORY_SEPARATOR.'sess_'.session_id(), sessionRawEncode($_SESSION));
 		}
@@ -71,6 +76,7 @@ while ($i < 100 && isset($argv[$i])){
 }
 unset($session_workaround);
 
+//Define where the APC memory cache should be
 define('APC_CACHE_FILENAME', md5(__DIR__.DIRECTORY_SEPARATOR.__FILE__).'.apc');
 if(PHP_OS == 'WINNT'){
 	define('APC_CACHE', sys_get_temp_dir().APC_CACHE_FILENAME);
@@ -78,23 +84,17 @@ if(PHP_OS == 'WINNT'){
 	define('APC_CACHE', '/dev/shm/'.APC_CACHE_FILENAME);
 }
 
+//If we can and are allowed to use APC then use it
 if (defined('USE_APC') && function_exists('apc_bin_loadfile') && is_readable(APC_CACHE)) {
 	apc_bin_loadfile(APC_CACHE, NULL, APC_BIN_VERIFY_CRC32 | APC_BIN_VERIFY_MD5);
 }
 
-//Hide the enviroment veriables to help provide obscurification
-foreach($_ENV as $key => $value){
-	putenv("$key=null");
-	$_ENV[$key]=null;
-	unset($_ENV[$key]);
-}
+fakeEnviroment();
 
-foreach($_SERVER as $key => $value){
-	$_SERVER[$key]=null;
-	unset($_SERVER[$key]);
-}
-
-
+/**
+ * function sessionRawEncode
+ * Rebuilds any session data that we wish o provide to the end user
+ */
 function sessionRawEncode($array, $safe = true){  
     // the session is passed as refernece, even if you dont want it to
     if($safe){
@@ -106,217 +106,46 @@ function sessionRawEncode($array, $safe = true){
     $keys = array_keys($array);
     foreach($keys as $key){
         $value = $array[$key];
-        $line ++ ;
+        ++$line;
        
         $raw .= $key.'|';
        
-        if(is_array($value) && isset($value['huge_recursion_blocker_we_hope'])) {
-            $raw .= 'R:'. $value['huge_recursion_blocker_we_hope'].';';
+        if(is_array($value) && isset($value['recursion_protection'])) {
+            $raw .= 'R:'. $value['recursion_protection'].';';
         } else {
             $raw .= serialize($value) ;
         }
-        $array[$key] = Array('huge_recursion_blocker_we_hope' => $line ) ;
+        $array[$key] = Array('recursion_protection' => $line ) ;
     }
    
     return $raw;
 }
 
-function fakeEnviroment(){
-	/*
-  'UNIQUE_ID' => string 'TiW4xwozAK0AAB2hKeoAAAAE' (length=24)
-  'HTTP_HOST' => string 'localhost' (length=9)
-  'HTTP_USER_AGENT' => string 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10.6; rv:5.0.1) Gecko/20100101 Firefox/5.0.1' (length=83)
-  'HTTP_ACCEPT' => string 'text/html,application/xhtml+xml,application/xml;q=0.9,*\/*;q=0.8' (length=63)
-  'HTTP_ACCEPT_LANGUAGE' => string 'en-us,en;q=0.5' (length=14)
-  'HTTP_ACCEPT_ENCODING' => string 'gzip, deflate' (length=13)
-  'HTTP_ACCEPT_CHARSET' => string 'ISO-8859-1,utf-8;q=0.7,*;q=0.7' (length=30)
-  'HTTP_CONNECTION' => string 'keep-alive' (length=10)
-  'HTTP_REFERER' => string 'http://localhost/Testing/' (length=25)
-  'HTTP_COOKIE' => string 'PHPSESSID=5epc0am69c4olckfrav2843gk4' (length=36)
-  'PATH' => string '/usr/bin:/bin:/usr/sbin:/sbin' (length=29)
-  'SERVER_SIGNATURE' => string '' (length=0)
-  'SERVER_SOFTWARE' => string 'Apache/2.2.17 (Unix) mod_ssl/2.2.17 OpenSSL/1.0.0d DAV/2 PHP/5.3.5' (length=66)
-  'SERVER_NAME' => string 'localhost' (length=9)
-  'SERVER_ADDR' => string '127.0.0.1' (length=9)
-  'SERVER_PORT' => string '80' (length=2)
-  'REMOTE_ADDR' => string '127.0.0.1' (length=9)
-  'DOCUMENT_ROOT' => string '/www/workspace' (length=14)
-  'SERVER_ADMIN' => string 'root@localhost' (length=14)
-  'SCRIPT_FILENAME' => string '/www/workspace/Testing/env.php' (length=30)
-  'REMOTE_PORT' => string '49653' (length=5)
-  'GATEWAY_INTERFACE' => string 'CGI/1.1' (length=7)
-  'SERVER_PROTOCOL' => string 'HTTP/1.1' (length=8)
-  'REQUEST_METHOD' => string 'GET' (length=3)
-  'QUERY_STRING' => string '' (length=0)
-  'REQUEST_URI' => string '/Testing/env.php' (length=16)
-  'SCRIPT_NAME' => string '/Testing/env.php' (length=16)
-  'PHP_SELF' => string '/Testing/env.php' (length=16)
-  'REQUEST_TIME' => int 1311094983
-	
-	
-array(76) {
-  ["_FCGI_X_PIPE_"]=>
-  string(53) "\\.\pipe\IISFCGI-30e73c76-2f53-45c2-8bb5-321448f98e79"
-  ["PHP_FCGI_MAX_REQUESTS"]=>
-  string(5) "10000"
-  ["PHPRC"]=>
-  string(21) "C:\Program Files\PHP\"
-  ["ALLUSERSPROFILE"]=>
-  string(35) "C:\Documents and Settings\All Users"
-  ["APP_POOL_ID"]=>
-  string(14) "DefaultAppPool"
-  ["ClusterLog"]=>
-  string(30) "C:\WINDOWS\Cluster\cluster.log"
-  ["CommonProgramFiles"]=>
-  string(29) "C:\Program Files\Common Files"
-  ["COMPUTERNAME"]=>
-  string(9) "WIN2K3SQL"
-  ["ComSpec"]=>
-  string(27) "C:\WINDOWS\system32\cmd.exe"
-  ["FP_NO_HOST_CHECK"]=>
-  string(2) "NO"
-  ["lib"]=>
-  string(32) "C:\Program Files\SQLXML 4.0\bin\"
-  ["NUMBER_OF_PROCESSORS"]=>
-  string(1) "1"
-  ["OS"]=>
-  string(10) "Windows_NT"
-  ["Path"]=>
-  string(381) "C:\Program Files\PHP\;C:\WINDOWS\system32;C:\WINDOWS;C:\WINDOWS\System32\Wbem;C:\Program Files\Microsoft SQL Server\80\Tools\Binn\;C:\Program Files\Microsoft SQL Server\90\Tools\binn\;C:\Program Files\Microsoft SQL Server\90\DTS\Binn\;C:\Program Files\Microsoft SQL Server\90\Tools\Binn\VSShell\Common7\IDE\;C:\Program Files\Microsoft Visual Studio 8\Common7\IDE\PrivateAssemblies\"
-  ["PATHEXT"]=>
-  string(48) ".COM;.EXE;.BAT;.CMD;.VBS;.VBE;.JS;.JSE;.WSF;.WSH"
-  ["PROCESSOR_ARCHITECTURE"]=>
-  string(3) "x86"
-  ["PROCESSOR_IDENTIFIER"]=>
-  string(47) "x86 Family 6 Model 23 Stepping 10, GenuineIntel"
-  ["PROCESSOR_LEVEL"]=>
-  string(1) "6"
-  ["PROCESSOR_REVISION"]=>
-  string(4) "170a"
-  ["ProgramFiles"]=>
-  string(16) "C:\Program Files"
-  ["SystemDrive"]=>
-  string(2) "C:"
-  ["SystemRoot"]=>
-  string(10) "C:\WINDOWS"
-  ["TEMP"]=>
-  string(15) "C:\WINDOWS\TEMP"
-  ["TMP"]=>
-  string(15) "C:\WINDOWS\TEMP"
-  ["USERPROFILE"]=>
-  string(38) "C:\Documents and Settings\Default User"
-  ["windir"]=>
-  string(10) "C:\WINDOWS"
-  ["FCGI_ROLE"]=>
-  string(9) "RESPONDER"
-  ["APPL_MD_PATH"]=>
-  string(23) "/LM/W3SVC/33230916/Root"
-  ["APPL_PHYSICAL_PATH"]=>
-  string(20) "\\VBOXSVR\workspace\"
-  ["AUTH_TYPE"]=>
-  string(0) ""
-  ["AUTH_PASSWORD"]=>
-  string(0) ""
-  ["AUTH_USER"]=>
-  string(0) ""
-  ["CERT_COOKIE"]=>
-  string(0) ""
-  ["CERT_FLAGS"]=>
-  string(0) ""
-  ["CERT_ISSUER"]=>
-  string(0) ""
-  ["CERT_SERIALNUMBER"]=>
-  string(0) ""
-  ["CERT_SUBJECT"]=>
-  string(0) ""
-  ["CONTENT_LENGTH"]=>
-  string(1) "0"
-  ["CONTENT_TYPE"]=>
-  string(0) ""
-  ["GATEWAY_INTERFACE"]=>
-  string(7) "CGI/1.1"
-  ["HTTPS"]=>
-  string(3) "off"
-  ["HTTPS_KEYSIZE"]=>
-  string(0) ""
-  ["HTTPS_SECRETKEYSIZE"]=>
-  string(0) ""
-  ["HTTPS_SERVER_ISSUER"]=>
-  string(0) ""
-  ["HTTPS_SERVER_SUBJECT"]=>
-  string(0) ""
-  ["INSTANCE_ID"]=>
-  string(8) "33230916"
-  ["INSTANCE_META_PATH"]=>
-  string(18) "/LM/W3SVC/33230916"
-  ["LOCAL_ADDR"]=>
-  string(9) "127.0.0.1"
-  ["LOGON_USER"]=>
-  string(0) ""
-  ["PATH_TRANSLATED"]=>
-  string(35) "\\VBOXSVR\workspace\Testing\env.php"
-  ["QUERY_STRING"]=>
-  string(0) ""
-  ["REMOTE_ADDR"]=>
-  string(9) "127.0.0.1"
-  ["REMOTE_HOST"]=>
-  string(9) "127.0.0.1"
-  ["REQUEST_METHOD"]=>
-  string(3) "GET"
-  ["SCRIPT_NAME"]=>
-  string(16) "/Testing/env.php"
-  ["SERVER_NAME"]=>
-  string(9) "localhost"
-  ["SERVER_PORT"]=>
-  string(2) "80"
-  ["SERVER_PORT_SECURE"]=>
-  string(1) "0"
-  ["SERVER_PROTOCOL"]=>
-  string(8) "HTTP/1.1"
-  ["SERVER_SOFTWARE"]=>
-  string(17) "Microsoft-IIS/6.0"
-  ["REMOTE_USER"]=>
-  string(0) ""
-  ["REMOTE_PORT"]=>
-  string(4) "1041"
-  ["URL"]=>
-  string(16) "/Testing/env.php"
-  ["REQUEST_URI"]=>
-  string(16) "/Testing/env.php"
-  ["DOCUMENT_ROOT"]=>
-  string(19) "\\VBOXSVR\workspace"
-  ["SCRIPT_FILENAME"]=>
-  string(35) "\\VBOXSVR\workspace\Testing\env.php"
-  ["HTTP_CONNECTION"]=>
-  string(10) "keep-alive"
-  ["HTTP_ACCEPT"]=>
-  string(63) "text/html,application/xhtml+xml,application/xml;q=0.9,*\/*;q=0.8"
-  ["HTTP_ACCEPT_ENCODING"]=>
-  string(13) "gzip, deflate"
-  ["HTTP_ACCEPT_LANGUAGE"]=>
-  string(14) "en-gb,en;q=0.5"
-  ["HTTP_HOST"]=>
-  string(9) "localhost"
-  ["HTTP_REFERER"]=>
-  string(25) "http://localhost/Testing/"
-  ["HTTP_USER_AGENT"]=>
-  string(63) "Mozilla/5.0 (Windows NT 5.2; rv:6.0) Gecko/20100101 Firefox/6.0"
-  ["ORIG_PATH_INFO"]=>
-  string(16) "/Testing/env.php"
-  ["PHP_SELF"]=>
-  string(16) "/Testing/env.php"
-  ["REQUEST_TIME"]=>
-  int(1311095240)
-}
-	
+/**
+ * function fakeEnviroment
+ * Builds enviromental var's that are approprate for the platform but generic to protect the end user
  */
-	
-}
+function fakeEnviroment(){
+	//Hide the enviroment veriables to help provide obscurification
+	foreach($_ENV as $key => $value){
+		putenv("$key=null");
+		$_ENV[$key]=null;
+		unset($_ENV[$key]);
+	}
 
-function fakeEnviromentIIS(){
+	//Hide the server veriables to help provide obscurification
+	foreach($_SERVER as $key => $value){
+		$_SERVER[$key]=null;
+		unset($_SERVER[$key]);
+	}
 	
-}
-
-function fakeEnviromentApache(){
+	if(PHP_OS == 'WINNT'){
+		require_once 'phpsandbox-enviroment-iis.php';
+	} else {
+		require_once 'phpsandbox-enviroment-apache.php';
+	}
 	
+	foreach($fakeServerEnv as $env_key => $value){
+		$_ENV[$env_key] = $value;
+	}
 }
