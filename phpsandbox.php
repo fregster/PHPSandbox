@@ -27,7 +27,9 @@ class PHPSandbox {
 	
 	private $lint_code = true;
 	private $session_workaround = false;
+	private $session_id = false;
 	
+	private $error_array = array();
 	private $options = 	array(	'chroot' => '/', 
 								'display_errors' => 'off',
 								'pass_post' => false, 
@@ -43,14 +45,20 @@ class PHPSandbox {
 								'safe_mode' => true,
 								'directory_protection' => true,
 								'directory_protection_allow_tmp' => true,
-								'use_apc' => true,
+								'use_apc' => false,
+								'log_to_file' => false,
+								'log_to_array' => true,
 								);
 	
 	private $cli_options = '';
+	private $cli_command = 'php';
 	
-	private $session_id = false;
+	private $run_start_time = 0;
+	private $run_end_time = 0;
 	
 	private $pre_fix_php = 'date_default_timezone_set("UTC");$i = 1;unset($argv[0]);while ($i < 3 && isset($argv[$i])){if(substr($argv[$i], 0, 5) == "_POST"){$_POST = unserialize(substr($argv[$i], 6));unset($argv[$i]);}else if(substr($argv[$i], 0, 4) == "_GET"){$_GET = unserialize(substr($argv[$i], 5));unset($argv[$i]);break;}$i++;}foreach($_ENV as $key => $value){putenv("$key=null");$_ENV[$key]=null;unset($_ENV[$key]);};echo"PREFIXED!";';
+	
+	
 	
 	/**
 	 * 
@@ -62,15 +70,19 @@ class PHPSandbox {
 	 */
 	public function __construct($options = array()){
 		$this->options['chroot'] = sys_get_temp_dir();
-		$this->options['auto_prepend_file'] = dirname(__FILE__).DIRECTORY_SEPARATOR.'phpsandbox-prepend.php';
-		$this->options['auto_append_file'] = dirname(__FILE__).DIRECTORY_SEPARATOR.'phpsandbox-append.php';
+		$this->options['auto_prepend_file'] = realpath(dirname(__FILE__)).DIRECTORY_SEPARATOR.'phpsandbox-prepend.php';
+		$this->options['auto_append_file'] = realpath(dirname(__FILE__)).DIRECTORY_SEPARATOR.'phpsandbox-append.php';
 		$this->options = array_merge($this->options, $options);
 		
 		if(isset($this->options['pass_session_id']) && $this->options['pass_session_id'] && isset($this->options['pass_session_data']) && $this->options['pass_session_data']){
 			$this->enableFunction('session_start', false);
 		}
 		
-		$this->tempPath = sys_get_temp_dir();
+		$this->tempPath = sys_get_temp_dir().DIRECTORY_SEPARATOR;
+		
+		if(PHP_VERSION >= 5.4){
+			$this->options['safe_mode'] = false;
+		}
 		
 		$this->sessionWorkaround();
 		
@@ -149,6 +161,8 @@ class PHPSandbox {
 	 * @param bool $lintCode
 	 */
 	public function runFile($path, $pass_through_vars = array(), $lintCode = true){
+		$path = realpath($path);
+		$this->clearErrorLog();
 		$restart_session = false;
 		$session_id = null;
 		$response = false;
@@ -164,8 +178,10 @@ class PHPSandbox {
 				$chroot = dirname($path);
 
 				//For debuging
-				//echo("php $this->cli_options -d auto_prepend_file=\"".addslashes($this->options['auto_prepend_file']).'"'.$this->enhancedProtection($chroot)." -d chroot=$chroot -f $path ".$this->buildVars($pass_through_vars));
-				$response = shell_exec("php $this->cli_options ".$this->enhancedProtection($chroot)." -d chroot=\"$chroot\" -f $path ".$this->buildVars($pass_through_vars));		
+				//$this->debug("$this->cli_command $this->cli_options -d auto_prepend_file=\"".addslashes($this->options['auto_prepend_file']).'"'.$this->enhancedProtection($chroot)." -d chroot=$chroot -f $path ".$this->buildVars($pass_through_vars));
+				$this->run_start_time = $this->timeStamp();
+				$response = shell_exec("$this->cli_command $this->cli_options ".$this->enhancedProtection($chroot)." -d chroot=\"$chroot\" -f $path ".$this->buildVars($pass_through_vars));		
+				$this->run_end_time = $this->timeStamp();
 			}
 		}
 		
@@ -173,8 +189,9 @@ class PHPSandbox {
 			//Ignore the warning about headers, we know already!
 			session_id($this->session_id);
 			@session_start();
-			if($this->session_workaround){
-				session_decode(file_get_contents($this->tempPath.'sess_'.$this->session_id));
+			$file = $this->tempPath.'sess_'.$this->session_id;
+			if($this->session_workaround && file_exists($file)){
+				session_decode(file_get_contents($file));
 				/*
 				if($this->tempPath.'sess_'.$this->session_id != ini_get('session.save_path')){
 					unlink($this->tempPath.'sess_'.$this->session_id);
@@ -252,7 +269,11 @@ class PHPSandbox {
 	
 	private function lintCode($code){
 		return true;
-		return shell_exec("php -l -r $code");
+		if(shell_exec("$this->cli_command -l -r $code")){
+			return true;
+		}
+		$this->debug('Code failed lint: ' . $code);
+		return false;
 	}
 	
 	/**
@@ -263,10 +284,11 @@ class PHPSandbox {
 	private function lintFile($path){
 		$output;
 		$return_var;
-		exec("php -l -f $path", $output, $return_var);
+		exec("$this->cli_command -l -f $path", $output, $return_var);
 		if($return_var == 0){
 			return true;
 		}
+		$this->debug('File failed lint: '. $path);
 		return false;
 	}
 	
@@ -313,5 +335,32 @@ class PHPSandbox {
 		}
 		
 		return $str;
+	}
+	
+	private function clearErrorLog(){
+		$this->error_log = array();
+	}
+	
+	private function debug($input){
+		if($this->options['log_to_array']){
+			$this->error_log[] = $input;
+		}
+		
+		if($this->options['log_to_file']){
+			error_log($input);
+		}
+	}
+	
+	public function errors(){
+		return $this->error_log;
+	}
+	
+	public function runTime(){
+		return round($this->run_end_time - $this->run_start_time,4);
+	}
+	
+	private function timeStamp(){
+		list($usec, $sec) = explode(" ", microtime());
+		return ((float)$usec + (float)$sec);
 	}
 }

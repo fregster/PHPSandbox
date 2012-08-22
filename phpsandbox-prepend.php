@@ -35,6 +35,8 @@ date_default_timezone_set('UTC');
 //Requires apc.enable_cli = 1 in the configuration
 if ( !defined('__DIR__') ) define('__DIR__', dirname(__FILE__));
 
+$FILE = $_SERVER['SCRIPT_FILENAME'];
+
 //If this is setup as root not really useful here and if your running as root your probably up **** creak anyway
 //@chroot(dirname(__FILE__));
 
@@ -42,6 +44,8 @@ if ( !defined('__DIR__') ) define('__DIR__', dirname(__FILE__));
 $session_workaround = false;
 $i = 1;
 unset($argv[0]);
+
+ini_set('error_log', sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'PHPSandbox_errors.log');
 
 //FIXME: This is very dirty needs re-writing
 while ($i < 100 && isset($argv[$i])){
@@ -62,10 +66,10 @@ while ($i < 100 && isset($argv[$i])){
 		$_SESSION = unserialize(substr($argv[$i], 9));
 		//Currently only works for file sessions
 		if($session_workaround){
-			@file_put_contents(ini_get('session.save_path').DIRECTORY_SEPARATOR.'sess_'.session_id(), sessionRawEncode($_SESSION));
+			@file_put_contents(ini_get('session.save_path') . DIRECTORY_SEPARATOR . 'sess_'.session_id(), sessionRawEncode($_SESSION));
 		}
 		unset($argv[$i]);
-	}else if(substr($argv[$i], 0, 4) == '_APC'){
+	}else if(substr($argv[$i], 0, 4) == '_APC' && extension_loaded('apc')){
 		define('USE_APC', true);
 		unset($argv[$i]);
 	}else if (substr($argv[$i], 0, 4) == '_END'){
@@ -77,16 +81,21 @@ while ($i < 100 && isset($argv[$i])){
 unset($session_workaround);
 
 //Define where the APC memory cache should be
-define('APC_CACHE_FILENAME', md5(__DIR__.DIRECTORY_SEPARATOR.__FILE__).'.apc');
+define('APC_CACHE_FILENAME', md5(__DIR__ . DIRECTORY_SEPARATOR . __FILE__ . $FILE).'.apc');
 if(PHP_OS == 'WINNT'){
-	define('APC_CACHE', sys_get_temp_dir().APC_CACHE_FILENAME);
+	define('APC_CACHE', realpath(sys_get_temp_dir()) . DIRECTORY_SEPARATOR . APC_CACHE_FILENAME);
 } else {
-	define('APC_CACHE', '/dev/shm/'.APC_CACHE_FILENAME);
+	define('APC_CACHE', realpath('/dev/shm/') . DIRECTORY_SEPARATOR . APC_CACHE_FILENAME);
 }
 
 //If we can and are allowed to use APC then use it
-if (defined('USE_APC') && function_exists('apc_bin_loadfile') && is_readable(APC_CACHE)) {
-	apc_bin_loadfile(APC_CACHE, NULL, APC_BIN_VERIFY_CRC32 | APC_BIN_VERIFY_MD5);
+if (defined('USE_APC') && USE_APC && function_exists('apc_bin_loadfile') && file_exists(APC_CACHE)){
+	if(is_readable(APC_CACHE)) {
+		apc_bin_loadfile(APC_CACHE, NULL, APC_BIN_VERIFY_CRC32 | APC_BIN_VERIFY_MD5);
+		//error_log('Loading APC Cache ' . APC_CACHE);
+	} else {
+		error_log('APC Cache file not readable ' . APC_CACHE);
+	}
 }
 
 fakeEnviroment();
