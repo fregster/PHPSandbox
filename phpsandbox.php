@@ -268,11 +268,13 @@ class PHPSandbox {
 	}
 	
 	private function lintCode($code){
-		return true;
-		if(shell_exec("$this->cli_command -l -r $code")){
+    		$output;
+		$return_var;
+    		exec("$this->cli_command -r \"".  ($code)."\" -l", $output, $return_var);
+		if($return_var == 0){
 			return true;
 		}
-		$this->debug('Code failed lint: ' . $code);
+		$this->debug('Code failed lint'. implode(", ", $output));
 		return false;
 	}
 	
