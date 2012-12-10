@@ -1,7 +1,26 @@
 <?php
 $fakeServerEnv = array(
-
+	'UNIQUE_ID' => sha1(rand(5, getrandmax()).time()),
+	'HTTP_HOST' => 'localhost',
+	'HTTP_ACCEPT' => string 'text/html,application/xhtml+xml,application/xml;q=0.9,*\/*;q=0.8',
+	'HTTP_ACCEPT_LANGUAGE' => 'en-us,en;q=0.5',
+	'HTTP_ACCEPT_ENCODING' => 'gzip, deflate',
+	'HTTP_ACCEPT_CHARSET' => 'ISO-8859-1,utf-8;q=0.7,*;q=0.7',
+	'HTTP_CONNECTION' => 'keep-alive',
+	'REMOTE_PORT' => '49653',
+	'GATEWAY_INTERFACE' => 'CGI/1.1',
+	'SERVER_PROTOCOL' => 'HTTP/1.1',
+	'REQUEST_METHOD' => 'GET',
+	'SERVER_ADMIN' => 'user@example.com',
+	'SERVER_SIGNATURE' => '',
+	'SERVER_SOFTWARE' => 'Apache',
+	'SERVER_NAME' => 'localhost',
+	'SERVER_ADDR' => '127.0.0.1',
+	'SERVER_PORT' => '80',
+	'REMOTE_ADDR' => '127.0.0.1',
+	'REQUEST_TIME' => time(),
 );
+
 /*
   'UNIQUE_ID' => string 'TiW4xwozAK0AAB2hKeoAAAAE' (length=24)
   'HTTP_HOST' => string 'localhost' (length=9)

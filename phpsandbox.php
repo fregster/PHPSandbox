@@ -152,6 +152,14 @@ class PHPSandbox {
 			$this->buildCLIOptions();
 		}
 	}
+
+	private function closeSession(){
+		if(isset($this->options['pass_session_id']) && $this->options['pass_session_id']){
+			$this->session_id = session_id();
+			session_write_close();
+			$restart_session = true;
+		}
+	}
 	
 	/**
 	 * 
@@ -169,11 +177,7 @@ class PHPSandbox {
 
 		if(file_exists($path)){
 			if(($lintCode && $this->lintFile($path)) || !$lintCode){
-				if(isset($this->options['pass_session_id']) && $this->options['pass_session_id']){
-					$this->session_id = session_id();
-					session_write_close();
-					$restart_session = true;
-				}
+				$this->closeSession();
 
 				$chroot = dirname($path);
 
@@ -204,13 +208,13 @@ class PHPSandbox {
 	}
 	
 	/**
-	 * NOT YET IMPLEMENTED
-	 * For running PHP code directly in a Sandboxed enviroment
+	 * For running PHP code directly in a Sandboxed environment
+	* This input will be stored as a file for future re-running, supports lint 
 	 * @param string $code
 	 * @param array $pass_through_vars
 	 * @param bool $lintCode
 	 */
-	public function runCode($code, $pass_through_vars = array(), $lintCode = false){
+	public function runCode($code, $pass_through_vars = array(), $lintCode = true){
 		$path = tempnam($this->tempPath, 'tmp');
 		file_put_contents($path, $code);
 		
@@ -219,6 +223,26 @@ class PHPSandbox {
 		return $response;
 	}
 	
+	/**
+	 * NOT YET IMPLEMENTED
+	 * For running PHP code directly in a Sandboxed environment
+	 * This function is highly likely to fail, really only use it for testing if you absolutely must do.
+	 * @param string $code
+	 * @param array $pass_through_vars
+	 */
+	public function runCodeDirect($code, $pass_through_vars = array()){
+		$this->clearErrorLog();
+		$restart_session = false;
+		$session_id = null;
+		$response = false;
+
+		$this->run_start_time = $this->timeStamp();
+		$this->closeSession();
+		$response = shell_exec("$this->cli_command $this->cli_options ".$this->enhancedProtection($chroot)." -d chroot=\"$chroot\" -r '$code' ".$this->buildVars($pass_through_vars));			$this->run_end_time = $this->timeStamp();
+
+		return $response;
+	}
+
 	/**
 	 * 
 	 * Build up the standard arguments to pass to the CLI
@@ -293,17 +317,23 @@ class PHPSandbox {
 	}
 	
 	/**
-	 * NOT YET IMPLEMENTED
 	 * Create a unique directory for CHRoot'ing to
 	 */
-	private function createTempCHRoot(){
-		return sys_get_temp_dir();
+	private function createTempCHRoot($salt = ''){
+		if(is_writable(sys_get_temp_dir())){
+			$dir = sys_get_temp_dir() . DIRECTORY_SEPARATOR . md5(uniqid(true).$salt);
+			if(is_dir($dir) || !mkdir($dir, 0700)){
+				$dir = $this->createTempCHRoot($dir);
+			}
+			return $dir;
+		}
+		return false;
 	}
 	
 	/**
 	 * enhancedProtection
 	 * Sets the additional options to help prevent directory traversal and PHP safe mode
-	 * @param string the directory of the sctips
+	 * @param string the directory of the scripts
 	 */
 	private function enhancedProtection($scriptDir){
 		$dir_seperator = ':';

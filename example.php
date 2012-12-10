@@ -111,8 +111,15 @@ if(!isset($_SESSION['TestValue'])){
 		</div>
 		
 		<div>
-			<div><h3>Example 7 - Running PHP from a string input</h3><p>Run the trusted PHP code but with protection and as if it's been streamed in to the command</p></div>
+			<div><h3>Example 7 - Running PHP from a string input</h3><p>Run the trusted PHP code but with protection and as if it's been passed in to the command</p></div>
 			<div style="border:1px; padding:5px; background:cornsilk;"><?php echo($sandbox3->runCode(file_get_contents($dir.'samples/trusted.php'))); ?></div>
+			<div><strong>Run Time:</strong> <?php echo($sandbox3->runTime()); ?></div>
+			<div><strong>Error Log:</strong> <?php var_dump($sandbox3->errors()); ?></div>
+		</div>
+
+		<div>
+			<div><h3>Example 8 - Running PHP directly from a string input</h3><p>Run the trusted PHP code but with protection and as if it's been streamed in to the command</p></div>
+			<div style="border:1px; padding:5px; background:cornsilk;"><?php echo($sandbox3->runCodeDirect(file_get_contents($dir.'samples/trusted.php'))); ?></div>
 			<div><strong>Run Time:</strong> <?php echo($sandbox3->runTime()); ?></div>
 			<div><strong>Error Log:</strong> <?php var_dump($sandbox3->errors()); ?></div>
 		</div>

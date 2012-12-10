@@ -1,7 +1,33 @@
 <?php
 $fakeServerEnv = array(
-
+	'OS' => 'Windows_NT',
+	'COMPUTERNAME' => 'localhost',
+	'REMOTE_ADDR' => '127.0.0.1',
+	'REMOTE_HOST' => '127.0.0.1',
+	'REQUEST_METHOD' => 'GET',
+	'SERVER_NAME' => 'localhost',
+	'SERVER_PORT' => '80',
+	'SERVER_PORT_SECURE' => '0',
+	'SERVER_PROTOCOL' => 'HTTP/1.1',
+	'SERVER_SOFTWARE' => 'Microsoft-IIS/6.0',
+	'REMOTE_USER' => '',
+	'REMOTE_PORT' => '1041',
+	'NUMBER_OF_PROCESSORS' => '1',
+	'GATEWAY_INTERFACE' => 'CGI/1.1',
+	'HTTPS' => 'off',
+	'HTTPS_KEYSIZE' => '',
+	'HTTPS_SECRETKEYSIZE' => '',
+	'HTTPS_SERVER_ISSUER' => '',
+	'HTTPS_SERVER_SUBJECT' => '',
+	'HTTP_CONNECTION' => 'keep-alive',
+	'HTTP_ACCEPT' => 'text/html,application/xhtml+xml,application/xml;q=0.9,*\/*;q=0.8',
+	'HTTP_ACCEPT_ENCODING' => 'gzip, deflate',
+	'HTTP_ACCEPT_LANGUAGE' => 'en-gb,en;q=0.5',
+	'HTTP_HOST' => 'localhost',
+	'HTTP_USER_AGENT' => 'Mozilla/5.0 (Windows NT 5.2; rv:6.0) Gecko/20100101 Firefox/6.0',
 );
+
+
 /*
   ["_FCGI_X_PIPE_"]=>
   string(53) "\\.\pipe\IISFCGI-30e73c76-2f53-45c2-8bb5-321448f98e79"
