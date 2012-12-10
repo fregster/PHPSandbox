@@ -2,7 +2,7 @@
 $fakeServerEnv = array(
 	'UNIQUE_ID' => sha1(rand(5, getrandmax()).time()),
 	'HTTP_HOST' => 'localhost',
-	'HTTP_ACCEPT' => string 'text/html,application/xhtml+xml,application/xml;q=0.9,*\/*;q=0.8',
+	'HTTP_ACCEPT' => 'text/html,application/xhtml+xml,application/xml;q=0.9,*\/*;q=0.8',
 	'HTTP_ACCEPT_LANGUAGE' => 'en-us,en;q=0.5',
 	'HTTP_ACCEPT_ENCODING' => 'gzip, deflate',
 	'HTTP_ACCEPT_CHARSET' => 'ISO-8859-1,utf-8;q=0.7,*;q=0.7',
