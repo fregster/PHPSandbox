@@ -58,8 +58,6 @@ class PHPSandbox {
 	
 	private $pre_fix_php = 'date_default_timezone_set("UTC");$i = 1;unset($argv[0]);while ($i < 3 && isset($argv[$i])){if(substr($argv[$i], 0, 5) == "_POST"){$_POST = unserialize(substr($argv[$i], 6));unset($argv[$i]);}else if(substr($argv[$i], 0, 4) == "_GET"){$_GET = unserialize(substr($argv[$i], 5));unset($argv[$i]);break;}$i++;}foreach($_ENV as $key => $value){putenv("$key=null");$_ENV[$key]=null;unset($_ENV[$key]);};echo"PREFIXED!";';
 	
-	
-	
 	/**
 	 * 
 	 * PHP Sandbox default construct
@@ -88,7 +86,16 @@ class PHPSandbox {
 		
 		$this->buildCLIOptions();
 	}
-	
+		
+	/**
+	 * setCLI
+	 * if the php's path is not set in %path% , or in case of multiple phps running in system
+	 * @param string $path
+	 */
+    	public function setCLI($path='php') {
+        	$this->cli_command = $path;
+    	}
+    	
 	private function sessionWorkaround(){
 		$session_workaround = array('Darwin' => true);
 		if(isset($session_workaround[PHP_OS]) && $session_workaround[PHP_OS] || $this->options['force_session_workaround']){
