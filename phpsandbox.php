@@ -290,8 +290,8 @@ class PHPSandbox {
 		$string .= ' _END';
 			
 		if(isset($pass_through_vars) and count($pass_through_vars) > 0){
-			foreach ($pass_through_vars as $value){
-				$string .= ' '.$value;
+			foreach ($pass_through_vars as $key => $value){
+				$string .= ' '.$key."=".$value;
 			}
 		}
 		
